@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Foori leht</title>
+    <script>
+        let url = "https://jl-arduino-default-rtdb.europe-west1.firebasedatabase.app/1118/3.json";
+
+        console.clear()
+
+        let m = "m";
+        let s = "s";
+        let p = "p";
+        let k = "k";
+        let r = "r";
+
+        let nupp = {
+            onVajutatud: false,
+            set: function (s) {
+                jalas.className = s ? "s" : "m";
+            },
+            reset: function () {
+                nupp.onVajutatud = false;
+                nupp.set(false);
+            },
+            vajuta: function () {
+                nupp.onVajutatud = true;
+                nupp.set(true);
+                if (nupp.vajutamiseKorral) nupp.vajutamiseKorral()
+            },
+            vajutamiseKorral: undefined
+        }
+
+        let auto = {
+            set: function (p, k, r) {
+                autop.className = p ? "p" : "m";
+                autok.className = k ? "k" : "m";
+                autor.className = r ? "r" : "m";
+            },
+            mineRoheliseks: function () {
+                // veidi kollast ja punast
+                auto.set(true, true, false);
+
+                // läheb roheliseks
+                setTimeout(() => {
+                    auto.set(false, false, true);
+                }, 2000)
+            },
+            minePunaseks: function () {
+                // vilkuv roheline
+                for (let i = 0; i < 6; i++) {
+                    setTimeout(() => {
+                        auto.set(false, false, i % 2 == 0);
+                    }, i * 500)
+                }
+
+                // veidi kollast
+                setTimeout(() => {
+                    auto.set(false, true, false);
+                }, 3000)
+
+                // läheb punaseks
+                setTimeout(() => {
+                    auto.set(true, false, false);
+                }, 5000)
+            }
+        }
+
+        let jala = {
+            set: function (p, r) {
+                jalap.className = p ? "p" : "m";
+                jalar.className = r ? "r" : "m";
+            },
+            mineRoheliseks: function () {
+                jala.set(false, true);
+            },
+            minePunaseks: function () {                
+                for (let i = 0; i < 6; i++) {
+                    setTimeout(() => {
+                        jala.set(false, i % 2 == 0);
+                    }, i * 500)
+                }
+
+                setTimeout(() => {
+                    jala.set(true, false);
+                }, 3000)
+            }
+        }
+
+        let startTime;
+        let freeLength;
+        let carLength;
+        let pedLength;
+
+        let tsykkel = {
+            length: 20,
+            mode: 0,
+            offset: 0,
+            loop: async function () {
+                await getInfoAsync();
+                freeLength = tsykkel.length * 1000 - 2000 - 5000 - 2000 - 5000;
+                carLength = freeLength * 0.7;
+                pedLength = freeLength * 0.3;
+
+                // start time for next cycle
+                startTime += tsykkel.length * 1000;
+                let nextDelay = startTime - Date.now();
+                console.log(nextDelay);
+
+                setTimeout(tsykkel.loop, nextDelay);
+                console.log("loop");
+
+                setTimeout(() => {
+                    switch (tsykkel.mode) {
+                        case 0: tsykkel.iseSeisev(); return;
+                        case 1: tsykkel.nupuga(); return;
+                        case 2: tsykkel.vilkuvKollane(); return;
+                    }
+                }, tsykkel.offset * 1000);
+            },
+            iseSeisev: function () {
+                jala.set(true, false);
+                auto.set(false, false, true);
+
+                setTimeout(auto.minePunaseks, carLength);
+                setTimeout(jala.mineRoheliseks, carLength + 5000);                
+                setTimeout(jala.minePunaseks, carLength + 5000 + 2000 + pedLength);
+                setTimeout(auto.mineRoheliseks, carLength + 5000 + 2000 + pedLength + 5000);
+
+            },
+            nupuga: function () {
+                jala.set(true, false);
+                auto.set(false, false, true);
+
+                let vajutaja = function () {
+                    setTimeout(auto.minePunaseks, 0);
+                    setTimeout(jala.mineRoheliseks, 5000);
+                    nupp.reset()
+                    setTimeout(jala.minePunaseks, 5000 + 2000 + pedLength);
+                    setTimeout(auto.mineRoheliseks, 5000 + 2000 + pedLength + 5000);
+                }
+
+
+                if (nupp.onVajutatud) {
+                    vajutaja();
+                }
+                else {
+                    nupp.vajutamiseKorral = vajutaja;
+                }
+
+                // võtab callbacki ära. peaks tsükli alguses kontrollima olekut
+                setTimeout(() => {
+                    nupp.vajutamiseKorral = undefined;
+                }, 5000 + 2000 + pedLength + 5000);
+            },
+            vilkuvKollane: function () {
+                jala.set(false, false);
+                auto.set(false, false, false);
+
+                for (let i = 0; i < tsykkel.length; i++) {
+                    setTimeout(() => {
+                        auto.set(false, i % 2 == 0, false)
+                    }, i * 1000)
+                }
+            }
+        }
+
+        async function getInfoAsync() {
+            let response = await fetch(url);
+            let data = await response.json();
+            let advancedData = data.split(',');
+            tsykkel.mode = parseInt(advancedData[0]);
+            tsykkel.length = parseInt(advancedData[1]);
+            tsykkel.offset = parseInt(advancedData[2]);
+            modetext.innerHTML = tsykkel.mode;
+            lengthtext.innerHTML = tsykkel.length;
+            offsettext.innerHTML = tsykkel.offset;
+            return;
+        }
+
+        function hakkaPihta() {
+            tsykkel.loop();
+            startTime = Date.now();
+        }
+
+        function algus() {
+            nupp.reset();
+            auto.set(false, false, false);
+            jala.set(false, false);
+        }
+
+
+    </script>
+    <style>
+        .m,
+        .p,
+        .k,
+        .r,
+        .s {
+            border: 1px solid lightgray;
+            display: block;
+            width: 50px;
+            height: 50px;
+        }
+
+        .m {
+            background-color: black;
+        }
+
+        .p {
+            background-color: red;
+        }
+
+        .k {
+            background-color: yellow;
+        }
+
+        .r {
+            background-color: lime;
+        }
+
+        .s {
+            background-color: blue;
+        }
+    </style>
+</head>
+
+<body onload="algus()">
+    <button onclick="hakkaPihta()">Alusta sync ja foorid</button>
+    <p>Tsükli režiim: <span id="modetext"></span></p>
+    <p>Tsükli pikkus: <span id="lengthtext"></span></p>
+    <p>Tsükli offset: <span id="offsettext"></span></p>
+    <div class="auto">
+        <h2>Autode foor</h2>
+        <div class="p" id="autop">
+
+        </div>
+        <div class="k" id="autok">
+
+        </div>
+        <div class="r" id="autor">
+
+        </div>
+    </div>
+    <div class="jala">
+        <h2>Jalakäijate foor</h2>
+        <div class="p" id="jalap">
+
+        </div>
+        <div class="r" id="jalar">
+
+        </div>
+        <p>Nupp</p>
+        <div class="s" id="jalas">
+        </div>
+        <button onclick="nupp.vajuta()">Vajuta mind et olla äge</button>
+    </div>
+</body>
+
+</html>

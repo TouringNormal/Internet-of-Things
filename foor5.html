@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>foor5</title>
+    <style>
+        .foorBody {
+            width: auto;
+            float: left;
+            background-color: rgb(78, 78, 78);
+            border-radius: 25px;
+            margin: 25px;
+            padding: 15px;
+
+        }
+
+        .foorTuli {
+            margin: 10px auto;
+            font-size: 40px;
+            text-align: center;
+        }
+
+        #🎮 {
+            padding: 0;
+            border: none;
+            background: none;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="autoFoor" class="foorBody">
+        <div id="🚗" class="foorTuli">⚫</div>
+        <div id="🚕" class="foorTuli">⚫</div>
+        <div id="🚙" class="foorTuli">⚫</div>
+    </div>
+    <div id="jalaFoor" class="foorBody">
+        <div id="😡" class="foorTuli">⚫</div>
+        <div id="🤢" class="foorTuli">⚫</div>
+    </div>
+    <div id="jalaNupp" class="foorBody">
+        <button id="🎮" class="foorTuli" onclick="setNupp()">🆒</button>
+    </div>
+    <div id="startNupp">
+        <div class="foorBody"><button id="f" class="foorTuli" onclick="start()">GO</button></div>
+
+    </div>
+</body>
+<script defer type="text/javascript">
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    let url = "https://jl-arduino-default-rtdb.europe-west1.firebasedatabase.app/1118/4.json";
+    let startTime = 0;
+    let active = 1
+    let cycleLength = 14000;
+    let cycleMode = 2;
+    let cycleOffset = 0;
+    let nupp = 0;
+
+    function setNupp() {
+        vahetaFoor('🎮');
+        nupp = 1;
+        console.log(nupp);
+    }
+    async function customWaitUntil(until) {
+        let offset = Date.now() - (startTime + cycleOffset);
+        if (until > offset) {
+            await sleep(until - offset);
+            console.log(until,offset);
+        }
+    }
+    async function getInfoAsync() {
+        let response = await fetch(url);
+        let data = await response.json();
+        let advancedData = data.split(',');
+        cycleMode = parseInt(advancedData[0]);
+        cycleLength = parseInt(advancedData[1]) * 1000;
+        cycleOffset = parseInt(advancedData[2]) * 1000;
+        return;
+    }
+
+    function vahetaFoor(foor, kustu = 0) {
+        if (foor == '🎮') {
+            if (kustu == 0) {
+                document.getElementById(foor).innerHTML = '🈚';
+            } else { document.getElementById(foor).innerHTML = '🆒'; }
+        }
+        else if (kustu == 1) {
+            document.getElementById(foor).innerHTML = '⚫';
+        } else {
+            switch (foor) {
+                case '🚗':
+                    document.getElementById(foor).innerHTML = '🔴';
+                    break;
+                case '🚕':
+                    document.getElementById(foor).innerHTML = '🟡';
+                    break;
+                case '🚙':
+                    document.getElementById(foor).innerHTML = '🟢';
+                    break;
+                case '😡':
+                    document.getElementById(foor).innerHTML = '🔴';
+                    break;
+                case '🤢':
+                    document.getElementById(foor).innerHTML = '🟢';
+                    break;
+                case '🎮':
+                    document.getElementById(foor).innerHTML = '🔵';
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    }
+    async function start() {
+        startTime = Date.now();
+        document.getElementById('startNupp').innerHTML = null;
+        while (active == 1) {
+            //küsi serverist uueim info
+            await getInfoAsync();
+
+            let freeLength = cycleLength - 2000 - 5000 - 2000 - 5000;
+            let carLength = freeLength * 0.7;
+            let pedLength = freeLength * 0.3;
+            let nextStartTime = startTime + cycleLength;
+            if (cycleMode == 0) {
+                nupp = 0;
+                vahetaFoor('😡'); vahetaFoor('🚙'); vahetaFoor('🤢', 1); vahetaFoor('🚕', 1); vahetaFoor('🚗', 1);
+                await customWaitUntil(carLength);
+                //setCarRed
+                vahetaFoor('🚙', 1); vahetaFoor('🚕', 1); vahetaFoor('🚗', 1);
+                for (var i = 0; i < 3; i++) {
+                    vahetaFoor('🚙', 0);
+                    await sleep(500);
+                    vahetaFoor('🚙', 1);
+                    await sleep(500);
+                }
+                vahetaFoor('🚕');
+                await sleep(2000);
+                vahetaFoor('🚕', 1); vahetaFoor('🚗', 0);
+
+                await customWaitUntil(carLength + 5000);
+
+                //setPedGreen
+                vahetaFoor('😡', 1); vahetaFoor('🤢', 1);
+                vahetaFoor('🤢', 0); vahetaFoor('🎮', 1);
+                nupp = 0;
+                await sleep(2000);
+
+                await customWaitUntil(carLength + 5000 + 2000 + pedLength);
+
+                //setPedRed
+                vahetaFoor('😡', 1); vahetaFoor('🤢', 1);
+                for (var i = 0; i < 5; i++) {
+                    vahetaFoor('🤢', 0);
+                    await sleep(500);
+                    vahetaFoor('🤢', 1);
+                    await sleep(500);
+                }
+                vahetaFoor('😡', 0);
+
+                await customWaitUntil(carLength + 5000 + 2000 + pedLength + 5000);
+                //setCarGreen
+                vahetaFoor('🚙', 1); vahetaFoor('🚕', 1); vahetaFoor('🚗', 1);
+                vahetaFoor('🚕', 0); vahetaFoor('🚗', 0);
+                await sleep(2000);
+                vahetaFoor('🚙', 0); vahetaFoor('🚕', 1); vahetaFoor('🚗', 1);
+
+                await customWaitUntil(carLength + 5000 + 2000 + pedLength + 5000 + 2000);
+
+            }
+            else if (cycleMode == 1) {
+                vahetaFoor('😡'); vahetaFoor('🚙'); vahetaFoor('🤢', 1); vahetaFoor('🚕', 1); vahetaFoor('🚗', 1);
+                while (!nupp && Date.now() + 1000 <= nextStartTime + cycleOffset) {
+                    //updatePedLight();
+                    await sleep(1000);
+                }
+
+                if (nupp) {
+                    let wait1 = 5000;
+                    let wait2 = 5000 + 2000 + pedLength;
+                    let wait3 = 5000 + 2000 + pedLength + 5000;
+
+                    if (Date.now() + wait3 <= nextStartTime + cycleOffset) {
+                        //setCarRed
+                        vahetaFoor('🚙', 1); vahetaFoor('🚕', 1); vahetaFoor('🚗', 1);
+                        for (var i = 0; i < 3; i++) {
+                            vahetaFoor('🚙', 0);
+                            await sleep(500);
+                            vahetaFoor('🚙', 1);
+                            await sleep(500);
+                        }
+                        vahetaFoor('🚕');
+                        await sleep(2000);
+                        vahetaFoor('🚕', 1); vahetaFoor('🚗', 0);
+
+                        await customWaitUntil(wait1);
+
+                        //setPedGreen
+                        vahetaFoor('😡', 1); vahetaFoor('🤢', 1);
+                        vahetaFoor('🤢', 0); vahetaFoor('🎮', 1);
+                        nupp = 0;
+                        await sleep(2000);
+
+                        await customWaitUntil(wait2);
+
+                        vahetaFoor('😡', 1); vahetaFoor('🤢', 1);
+                        for (var i = 0; i < 5; i++) {
+                            vahetaFoor('🤢', 0);
+                            await sleep(500);
+                            vahetaFoor('🤢', 1);
+                            await sleep(500);
+                        }
+                        vahetaFoor('😡', 0);
+
+                        await customWaitUntil(wait3);
+                    }
+                }
+            }
+            else if (cycleMode == 2) {
+                vahetaFoor('😡', 1); vahetaFoor('🤢', 1); vahetaFoor('🚙', 1); vahetaFoor('🚕', 1); vahetaFoor('🚗', 1);
+                while (Date.now() + 2000 <= nextStartTime + cycleOffset) {
+                    vahetaFoor('🚕');
+                    await sleep(1000);
+                    vahetaFoor('🚕', 1);
+                    await sleep(1000);
+                }
+            }
+            startTime = nextStartTime;
+        }
+    }
+
+</script>
+
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    .slidecontainer {
+      width: 100%;
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 25px;
+      background: #d3d3d3;
+      outline: none;
+      opacity: 0.7;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+
+    .slider:hover {
+      opacity: 1;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 25px;
+      height: 25px;
+      background: #04AA6D;
+      cursor: pointer;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 25px;
+      height: 25px;
+      background: #04AA6D;
+      cursor: pointer;
+    }
+  </style>
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.11.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/9.11.0/firebase-database.js";
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNFBIKDICjyZs7HMnTUwC2x7fqRhcBl50",
+      authDomain: "jl-arduino.firebaseapp.com",
+      databaseURL: "https://jl-arduino-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "jl-arduino",
+      storageBucket: "jl-arduino.appspot.com",
+      messagingSenderId: "19931518808",
+      appId: "1:19931518808:web:9dd07145c9baaa4e0a772d"
+    };
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase();
+    const koht = ref(db, "1118");
+    const koht1 = ref(db, "1118/1");
+    const koht2 = ref(db, "1118/2");
+    const koht3 = ref(db, "1118/3");
+    const koht4 = ref(db, "1118/4");
+
+    var slider = document.getElementById("kestvus");
+    var output = document.getElementById("demo");
+
+    onValue(koht, kuva);
+    //onValue(koht, kuva)            
+    function kuva(viit) {
+      let text = "";
+      let sisu = viit.val();
+      let id = 0;
+      if (sisu) sisu.forEach((foor) => {
+        id++;
+        let vaartused = foor.split(",");
+        console.log(vaartused);
+        document.getElementById("mode").value = vaartused[0];
+        slider.value = vaartused[1];
+        output.innerHTML = slider.value;
+        text += "<p><label>" 
+        text += "<b>Foor " + String(id) + "</b>: ";
+        text += "Offset: <input type='number' value='" + vaartused[2] + "' id='offset" + String(id) + "' min='0' max='" + vaartused[1] + "'>"
+        text += `
+          <label>Režiim:
+            <select id="mode${String(id)}">
+              <option value="0">Iseseisev</option>
+              <option value="1">Koos nupuga</option>
+              <option value="2">Vilkuv kollane</option>
+            </select>
+          </label>
+          `;
+        text += "</label</p>";
+      })
+      foorid.innerHTML = text;
+    }
+    buttonSet.onclick = buttonSetValue;
+
+    everyMode.onclick = setAllModes;
+
+    function setAllModes() {
+      mode1.value = mode.value;
+      mode2.value = mode.value;
+      mode3.value = mode.value;
+      mode4.value = mode.value;
+    }
+
+    async function setAllTrafficLights(
+      mode1, kestvus1, offset1,
+      mode2, kestvus2, offset2,
+      mode3, kestvus3, offset3,
+      mode4, kestvus4, offset4
+    ) {
+      let megastring = [null, `${mode1},${kestvus1},${offset1}`, `${mode2},${kestvus2},${offset2}`, `${mode3},${kestvus3},${offset3}`, `${mode4},${kestvus4},${offset4}`];
+      console.log(megastring);
+      await set(koht, megastring);
+    }
+
+    async function buttonSetValue() {
+      let kestvus = document.getElementById("kestvus").value.toString()
+
+      await setAllTrafficLights(
+        mode1.value, kestvus, offset1.value,
+        mode2.value, kestvus, offset2.value,
+        mode3.value, kestvus, offset3.value,
+        mode4.value, kestvus, offset4.value
+      );
+    }
+
+    buttonMorning.onclick = morning;
+    buttonEvening.onclick = evening;
+
+    async function morning() {
+      let delay = morningDelay.value;
+      offset1.value = delay * 0;
+      offset2.value = delay * 1;
+      offset3.value = delay * 2;
+      offset4.value = delay * 3;
+
+      buttonSetValue();
+    }
+
+    async function evening() {
+      let delay = morningDelay.value;
+      offset1.value = delay * 3;
+      offset2.value = delay * 2;
+      offset3.value = delay * 1;
+      offset4.value = delay * 0;
+
+      buttonSetValue();
+    }
+
+
+
+    slider.oninput = function () {
+      output.innerHTML = this.value;
+    }
+  </script>
+</head>
+
+<body>
+  <h3>Foori kontroller:</h3>
+  <label>Muuda kõigi režiim:
+    <select id="mode">
+      <option value="0">Iseseisev</option>
+      <option value="1">Koos nupuga</option>
+      <option value="2">Vilkuv kollane</option>
+    </select>
+  </label>
+  <button id="everyMode">Muuda kõigi režiim !!!</button>
+  <hr>
+  <label>kestvus:
+    <div class="slidecontainer">
+      <input type="range" min="14" max="120" class="slider" id="kestvus">
+      <p>sekundid: <span id="demo"></span></p>
+    </div>
+    <p id="foorid"></p>
+
+  </label>
+  <div>
+    <button id="buttonSet">Säti</button>
+    <div>
+      <p>Hommiku õhtu režiimi delay: <input id="morningDelay" type="number" min="0" value="2"></p>
+      <button id="buttonMorning">Hommiku režiim</button>
+      <button id="buttonEvening">Õhtu režiim</button>
+    </div>
+  </div>
+</body>
+
+</html>
